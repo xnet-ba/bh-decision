@@ -99,6 +99,8 @@ tests/                         45 TS testova (bez ključeva i mreže)
 5. Provjera: `/decision-status` ili `decision_status` MCP alat. Zahtjevi: Node ≥ 22.
 
 Detalji: `docs/installation/opencode.md`, `docs/installation/local-clef.md`.
+Verzije: basic (Jev Free, $0) vs advanced (lokalni Tacit-4B preko API-ja) —
+`docs/installation/tiers.md`, gotovi configi `config/decision.{basic,advanced}.json`.
 Privatnost: `docs/security/privacy.md`.
 
 ## Ručne komande
