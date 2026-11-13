@@ -1,0 +1,63 @@
+# CHANGELOG — Decision Intelligence
+
+## Unreleased — Nezavisna analiza (8 tačaka)
+
+- P1 metrike: `status()` sada vraća p50/p95 latenciju, broj eskalacija, keš hitove i
+  precheck pokrivenost (`hits/misses/coverage`); glavna metrika ostaje ukupno vrijeme
+  i tokeni po zadatku — naš dio se mjeri, agentski dio je izvan ovog sloja.
+- P2 kontekst: opisi 14 alata skraćeni 1017→511 znakova (~254→~127 tokena, −50%);
+  potpuno sažimanje 14→3-4 alata odgođeno jer je breaking change (testovi + skill + docs).
+- P3 auto-hook: NIJE izvodljivo — instalirani `@opencode/plugin` nema hook/event API
+  (`tool.execute.before` ne postoji u dist tipovima); rizik-gate ostaje ručni/MCP.
+- P4 pravila: novi `packages/decision-core/src/precheck.ts` (6 obrazaca: rm -rf, SQL
+  DROP, git push --force, delete-database, obriši-bazu, format/mkfs); `decision_assess_risk`
+  i `/decision-risk` prvo pitaju pravilo (0 ms, 0 tokena), pokrivenost se loguje.
+- P5 lokalna ruta: preskočeno po direktivi — samo Jev Free, ništa drugo.
+- P6 kalibracija: bez koda — Jev vraća degenerirane 0/1 confidence pa se scaler nema na
+  šta fitati (nema označene varijanse); pragovi ostaju, preporuka je eksplicitno
+  `noul` pitanje dostatnosti (već dokumentirano).
+- P7 keš: ključ normaliziran (mala slova + jedan razmak), hit rate u `status()`;
+  bez perzistencije na disk iz privatnosti (taskovi mogu sadržavati tajne).
+- P8 paralelizam: SKILL.md dopunjen — risk-procjena paralelno s prikazom odobrenja.
+- Jev-only default: `fallback: []` (bilo `clef_local`); `decision.example.yaml` usklađen.
+- Testovi: 51 zeleno (45 + 5 precheck + 1 plugin rule-hit).
+- A/B test (13 zadataka, Jev-1.13-Free obje grane): model+skill 13/13 vs model sam
+  12/13 (+7,7 pp), 5 poziva manje (3 precheck + 2 keš), −757 ms, −38% bajtova.
+  Model sam potcijenio `rm -rf` kao low rizik. Runner: `scripts/ab_compare.py`,
+  sirovo: `benchmarks/reports/ab-20261113.json`.
+- A/B v2 (30 zadataka, trik-varijante + near-miss + eskalacije + mamci): obje grane
+  25/28 (89,3%) — iste 3 greške modela; skill: 11 poziva manje (5 precheck + 6 keš),
+  −4023 ms / −38% bajtova. Runner: `scripts/ab_compare2.py`, sirovo: `benchmarks/reports/ab2-20261113.json`.
+- A/B v3 (52 zadatka, injekcije + dugi kontekst + obfuskacije; paired 46): model+skill
+  43/46 (93,5%) vs model sam 39/46 (84,8%); −15 poziva, −3839 ms, −35% bajtova.
+  Model podlegao injekcijama (0/2) i zakopanim naredbama (0/2), pravila imuna.
+  Lažni pogodak: citirani `echo "rm -rf /"`. Kraj runa prekinuo FreeUsageLimit,
+  zatim ključ mrtav (Invalid credential) — 6 zadataka paired-isključeno, treba novi ključ.
+  Runner: `scripts/ab_compare3.py`, sirovo: `benchmarks/reports/ab3-20261113.json`.
+- A/B v4 (ista 52 zadatka, LOKALNI Tacit-4B CPU jer je ključ mrtav): model+skill
+  40/50 (80%) vs model sam 36/50 (72%); −15 poziva, −234 s (−57%), −31% bajtova.
+  Slabiji model → veća dobit. Dugi kontekst 0/4→2/4, injekcije 1/4→3/4 (README-injekcija
+  vara oba). Citirani `rm` vara i model i pravilo. Runner: `scripts/ab_compare4.py`.
+- HTML izvještaji serije (isti format kao mailovi): `benchmarks/reports/ab-v{1,2,3,4}-20261113.html`,
+  generator: `scripts/ab_report.py`. v3 summary preračunat kao paired (6 limit-zadataka
+  dokumentirano isključeno iz obje grane).
+
+## Unreleased — Plugin UX komande
+
+- Plugin: `/decision-risk <zadatak>` (risk_level + needs_approval), `/decision-rank <zadatak> | opt1, opt2, opt3` (min. 2 opcije); `provider=<id>` prefiks sada na sve tri komande; zajednički jednolinijski ispis.
+- Skill: dokumentirane nove ručne komande sa sintaksom.
+- Testovi: 45 zeleno (43 + 2 nova za rank-usage i risk-fallback).
+- Skill: ručni primjeri za `/decision-risk` i `/decision-rank` + napomena o zarezu.
+
+## 0.1.0 (2026-11-12) — Faze 1–6
+
+- Faza 1: discovery — Jev Free, Clef-Flash, plugin API v2.2.7, skill format, MCP SDK
+  provjereni iz službenih izvora; korekcija tipova (`noul/choice/score`).
+- Faza 2: `packages/decision-core` — normalizacija, registar s denylistom plaćenih,
+  fallback lanac, dedup/keš/breaker/budžet, metrike, redakcija tajni.
+- Faza 3: `packages/decision-mcp` — 11 `decision_*` alata, stdio transport.
+- Faza 4: `skills/decision-intelligence/SKILL.md` (dvojezična operativna pravila).
+- Faza 5: `packages/opencode-plugin` — registracija skilla+MCP, `/decision`,
+  `/decision-status`; bez auto-hookova (namjerno, protiv latencije po zahtjevu).
+- Faza 6: 29 testova zeleno; harness smoke p50 8 ms; live mjerenja čekaju ključeve.
+- Greške pronađene testovima i ispravljene: breaker-reset bug, redactSecrets regex.
